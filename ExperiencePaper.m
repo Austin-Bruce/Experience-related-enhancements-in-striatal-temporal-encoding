@@ -4,7 +4,6 @@ close all
 clear all 
 
 tic; 
-%% Corrected clustering
 % loadRawData_v5; %sets up dataSt and neuronDB. Raw files needed. 
 LoadData %
 Figure2_Revision; % 
