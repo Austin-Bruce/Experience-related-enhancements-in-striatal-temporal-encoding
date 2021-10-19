@@ -231,23 +231,25 @@ ncount = 1;
 trialTarget = 6;
 
 
+% create binned histograms for behavioral and neural events
 for i_neuron = 1:length(spikeDat)
-%     spike_trial = neurons(i_neuron).periEventSpikes;
     spike_trial = double(spikeDat{i_neuron});
     short_rsps = double(shortDat{i_neuron});
     long_rsps = double(longDat{i_neuron});
     left_rsps = double(leftDat{i_neuron});
     right_rsps = double(rightDat{i_neuron});
     motor_trial = double(motorDat{i_neuron});
-%     reward_trial = diag(rewardDat{i_neuron}(:,1));
+    reward_trial = diag(rewardDat{i_neuron}(:,1));
     interval_bins = intStart:binSize:intEnd;
     switch_rsps = switchDat{i_neuron};
     time_x = timep;
     
+    %spikes per bin
     a = histc(spike_trial',interval_bins); % time x trial
     b = a(1:end-1,:);
     nelb = ncount+numel(b)-1;
     
+    %motor response
     y = histc(motor_trial',interval_bins); %np x trial
     dimy = size(y);
     if dimy(1) > 1
@@ -297,24 +299,24 @@ for i_neuron = 1:length(spikeDat)
         m = m';
     end
     
-    
-%     
-%     reward_trial(reward_trial == 0) = NaN;
-%     r = histc(reward_trial', interval_bins);
-%     s = r(1:end-1,:);
+    %reward delivery     
+    reward_trial(reward_trial == 0) = NaN;
+    r = histc(reward_trial', interval_bins);
+    s = r(1:end-1,:);
 
+    %switch    
     switch_rsps  = diag(switch_rsps);
     switch_rsps(switch_rsps== 0) = NaN;
     d = histc(switch_rsps, interval_bins);
     e = d(1:end-1,:);
     
-    
+    %reshpae histograms for on giant table for GLMe's 
     t_firing_rate(ncount:nelb) = reshape(b,[],1);
     t_times(ncount:nelb) = repmat(time_x,size(b,2),1);
     t_targets = t_times == 6;
     t_neuron_num(ncount:nelb) = repmat(i_neuron,numel(b),1);
     t_nosepokes(ncount:nelb) = reshape(z,[],1);
-%     t_rewards(ncount:nelb) = reshape(s,[],1);
+    t_rewards(ncount:nelb) = reshape(s,[],1);
     t_switches(ncount:nelb) = reshape(e,[],1);
     t_short(ncount:nelb) = reshape(g,[],1);
     t_long(ncount:nelb) = reshape(i,[],1);
@@ -326,9 +328,9 @@ end
 % 
 
 t_switches(isnan(t_switches)) = 0;
-% t_rewards(isnan(t_rewards)) = 0;
+t_rewards(isnan(t_rewards)) = 0;
 if size(t_nosepokes,1)==1; t_nosepokes = t_nosepokes'; end;
-% if size(t_rewards,1)==1; t_rewards = t_rewards'; end;
+if size(t_rewards,1)==1; t_rewards = t_rewards'; end;
 if size(t_switches,1)==1; t_switches = t_switches'; end;
 if size(t_left,1)==1; t_left = t_left'; end;
 if size(t_right,1)==1; t_right = t_right'; end;
@@ -336,14 +338,14 @@ if size(t_short,1)==1; t_short = t_short'; end;
 if size(t_long,1)==1; t_long = t_long'; end;
 
 
-%create a large table for the overall model
-% T_SPK = table(t_firing_rate,t_times,t_neuron_num, t_nosepokes, t_switches, t_rewards, 'VariableNames',{'FiringRate','Times','Neurons', 'Motor', 'Switch', 'Reward'});
+%create a large table for the overall model -- can include your variables of interest
+% T_SPK = table(t_firing_rate,t_times,t_neuron_num, t_nosepokes, t_switches, t_rewards, 'VariableNames',{'FiringRate','Times','Neurons', 'Motor', 'Switch', 'Reward'}); 
 T_SPK = table(t_firing_rate,t_times,t_neuron_num, t_nosepokes, t_switches, t_short, t_long, t_left, t_right, 'VariableNames',{'FiringRate','Times','Neurons', 'Motor', 'Switch', 'ShortMotor', 'LongMotor', 'LeftMotor', 'RightMotor'});
 lm = fitglme(T_SPK, 'FiringRate~Times+Motor+Switch+(1|Neurons)');
 anova(lm);  
 
-pValues = struct();
-pValues.names = neuronNames;
+pValues = struct(); % will use benjemeni-hochberg correction as selection criteria
+pValues.names = neuronNames; 
 
 %create neuron by neuron glme's and store the result in one struct
 for i_neuron = 1:length(spikeDat)
@@ -374,8 +376,6 @@ for i_neuron = 1:length(spikeDat)
 %     pValues(i_neuron).pReward = [lmNeuronAnova{2,5}];
 end
 
-
-
 %params for rasters
 nexFiles = struct;
 params = struct;
@@ -384,4 +384,4 @@ params.CI = 'off';
 params.Bar = 'off';
 params.ZeroLine = 'on';
 params.RandPerm = 0;
-params.Color = [ 0 0 0; 1 0 0; 0 0 1; 1 0 1];  % don't need a colormap command
+params.Color = [ 0 0 0; 1 0 0; 0 0 1; 1 0 1];  % change colormap as you want
